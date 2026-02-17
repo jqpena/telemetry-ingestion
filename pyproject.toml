@@ -1,0 +1,96 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "telemetry-events"
+requires-python = ">=3.14"
+dynamic = ["version", "readme"]
+description = "Clean, production-ready event driven telemetry ingestion service and persist them for analytics retrieval"
+authors = [{ name = "Julio Quintero", email = "jequinterope@unal.edu.co" }]
+license = { file = "LICENSE" }
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+strict = true
+implicit_optional = true
+install_types = true
+incremental = true
+cache_dir = ".cache/mypy"
+sqlite_cache = true
+
+[tool.ruff]
+# Tell to ruff if fix the violations
+fix = true
+# Cache dir for ruff
+cache-dir = "./.cache/ruff"
+line-length = 100
+# Tells ruff to ignore the same files and dirs in .gitignore
+respect-gitignore = true
+# Tells ruff to show the fixes
+show-fixes = true
+# Files to include in ruff checks
+src = ["api"]
+# Number of spaced to use for indentation
+indent-width = 4
+
+[tool.ruff.format]
+docstring-code-format = true
+indent-style = "space"
+quote-style = "double"
+
+[tool.ruff.lint]
+# List of rules to enable
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+
+[tool.ruff.lint.flake8-annotations]
+# Suppress explicitly return None
+suppress-none-returning = true
+# Suppress dynamically typed function arguments *argc and **kwargs
+allow-star-arg-any = true
+
+[tool.ruff.lint.flake8-type-checking]
+# Add quotes around type annotations, if doing so would allow
+# an import to be moved into a type-checking block.
+quote-annotations = true
+# Exempt classes to be moved to type-checking block
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+# Exempt functions decorators to be moved to type-checking block
+runtime-evaluated-decorators = ["pydantic.*", "fastapi.FasAPI.*"]
+# Enforce TC001, TC002, and TC003
+strict = true
+
+[tool.ruff.lint.isort]
+# Case sensitive imports
+case-sensitive = true
+# Split into sections the imports
+no-sections = false
+
+[tool.ruff.lint.pep8-naming]
+# Decorators that should be treated as class methods
+classmethod-decorators = [
+    # Allow Pydantic's `@validator` decorator to trigger class method treatment.
+    "pydantic.validator",
+]
+# Ignore pep naming methods
+extend-ignore-names = ["test_*", "*_test"]
+
+[tool.ruff.lint.pycodestyle]
+# Set the maximum line length for to allow line-too-long violations
+max-line-length = 120
+
+[tool.ruff.lint.pyupgrade]
+# Preserve types, even if a file imports `from __future__ import annotations`.
+keep-runtime-typing = true
+
+[tool.setuptools.dynamic]
+version = { attr = "api.__version__" }
+readme = { file = "README.md", content-type = "text/markdown" }
