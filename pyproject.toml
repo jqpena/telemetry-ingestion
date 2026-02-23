@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "telemetry-events"
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 dynamic = ["version", "readme"]
 description = "Clean, production-ready event driven telemetry ingestion service and persist them for analytics retrieval"
 authors = [{ name = "Julio Quintero", email = "jequinterope@unal.edu.co" }]
