@@ -1,0 +1,14 @@
+# Alembic Migrations
+
+For convenience and as schema changes over time and iterations, it must be versioned and reproducible at any time, thats why the schema changes are tracked using alembic.
+The project it's going to be divided into two main branches `main` where the common PostgresSQL definitions reside and `timescale`, my favorite flavor of Postgres when we are dealing with a bast amount of time date.
+
+With that being said, we can reproduce the database schema using only basic Postgres definition or, we can upgrade up our database with the use of **hypertables**, in any case we can just upgrade from a new fresh database that alembic will handle the heavy work for us.
+
+## Using Postgres
+
+<!-- TODO: explain Postgres configuration -->
+
+## Using Timescale
+
+<!-- TODO: explain the setup of TimeScaleDB using its cloud provider or self-hosted -->

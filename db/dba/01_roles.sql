@@ -22,6 +22,9 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_database WHERE datname = 'telemetry') THEN
         ALTER DATABASE telemetry
             OWNER TO telemetry_owner;
+
+        ALTER SCHEMA "raw"
+            OWNER TO telemetry_owner;
     END IF;
 
     -- Role to use raw schema, this is to avoid boiler plate code

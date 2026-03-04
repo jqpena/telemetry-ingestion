@@ -10,6 +10,6 @@
 
 # Description
 
-Explain desing desicions, like why to use Alembic "schema changes must be versioned and reproducible. I wanted the project to reflect real-world database lifecycle management rather than static SQL scripts"
+<!-- Explain desing desicions, like why to use Alembic "schema changes must be versioned and reproducible. I wanted the project to reflect real-world database lifecycle management rather than static SQL scripts" -->
 
 # Local deploy

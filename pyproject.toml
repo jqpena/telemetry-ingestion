@@ -107,9 +107,9 @@ script_location = "%(here)s/alembic"
 # Uncomment the line below if you want the files to be prepended with date and time
 # see https://alembic.sqlalchemy.org/en/latest/tutorial.html#editing-the-ini-file
 # for all available tokens
-file_template = "%%(year)d_%%(month).2d_%%(day).2d_%%(hour).2d%%(minute).2d-%%(rev)s_%%(slug)s"
+# file_template = "%%(year)d_%%(month).2d_%%(day).2d_%%(hour).2d%%(minute).2d-%%(rev)s_%%(slug)s"
 # Or organize into date-based subdirectories (requires recursive_version_locations = true)
-# file_template = "%%(year)d/%%(month).2d/%%(day).2d_%%(hour).2d%%(minute).2d_%%(second).2d_%%(rev)s_%%(slug)s"
+file_template = "%%(year)d/%%(month).2d/%%(day).2d_%%(hour).2d%%(minute).2d_%%(rev)s_%%(slug)s"
 
 # additional paths to be prepended to sys.path. defaults to the current working directory.
 prepend_sys_path = ["."]
@@ -123,7 +123,7 @@ prepend_sys_path = ["."]
 timezone = "UTC"
 
 # max length of characters to apply to the "slug" field
-truncate_slug_length = 50
+truncate_slug_length = 20
 
 # set to 'true' to run the environment during
 # the 'revision' command, regardless of autogenerate
@@ -137,16 +137,16 @@ revision_environment = false
 # version location specification; This defaults
 # to <script_location>/versions.  When using multiple version
 # directories, initial revisions must be specified with --version-path.
-# version_locations = [
-#    "%(here)s/alembic/versions/simple",
-#    "%(here)s/alembic/versions/timescale"
-# ]
+version_locations = [
+    "%(here)s/alembic/versions/",
+    "%(here)s/alembic/timescale/",
+]
 
 
 # set to 'true' to search source files recursively
 # in each "version_locations" directory
 # new in Alembic version 1.10
-# recursive_version_locations = false
+recursive_version_locations = true
 
 # the output encoding used when revision files
 # are written from script.py.mako

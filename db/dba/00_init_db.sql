@@ -5,4 +5,7 @@ BEGIN
     END IF;
 END $$ LANGUAGE plpgsql;
 \c telemetry
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE SCHEMA IF NOT EXISTS "raw";

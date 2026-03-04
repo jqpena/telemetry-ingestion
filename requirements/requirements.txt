@@ -5,4 +5,3 @@ pydantic>=2.10
 sqlalchemy
 psycopg[binary]>=3.3
 python-decouple
-alembic[tz]>=1.18
