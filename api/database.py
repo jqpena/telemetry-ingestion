@@ -4,6 +4,7 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from sqlalchemy.schema import MetaData
 
 from .config import Config
+from .exc import InternalError
 
 
 class DBBase(DeclarativeBase):
@@ -20,7 +21,7 @@ _engine = create_engine(
     connect_args={"options": f"-c timezone={Config['TIMEZONE'] or 'UTC'}"},
 )
 
-SessionLocal = sessionmaker(bind=_engine, expire_on_commit=False)
+SessionFactory = sessionmaker(bind=_engine, expire_on_commit=False, autoflush=False)
 
 PG_VERSION = _engine.dialect.server_version_info
 PG_MINIMUM_VERSION = (18, 0)
@@ -35,3 +36,13 @@ elif PG_VERSION < PG_MINIMUM_VERSION:
     raise RuntimeError(
         f"PostgreSQL version {PG_VERSION} is not supported. Upgrade to a newer version to use this application."
     )
+
+
+def get_session():
+    try:
+        with SessionFactory.begin() as session:
+            yield session
+    except SQLAlchemyError as e_sql:
+        raise InternalError(
+            f"Error catch by dependency get_session (Type={type(e_sql).__name__})", e_sql
+        ) from None
