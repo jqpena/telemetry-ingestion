@@ -39,17 +39,21 @@ BEGIN
 
     -- Altering default privileges so when a new sequence is
     -- created the role would be able to use it
-    ALTER DEFAULT PRIVILEGES IN SCHEMA "raw"
+    ALTER DEFAULT PRIVILEGES FOR ROLE telemetry_owner IN SCHEMA "raw"
     GRANT USAGE ON SEQUENCES TO telemetry_raw_write;
+
+    ALTER DEFAULT PRIVILEGES FOR ROLE telemetry_owner IN SCHEMA "raw"
+    GRANT INSERT, UPDATE, DELETE ON TABLES TO telemetry_raw_write;
 
     CREATE ROLE telemetry_raw_read WITH NOLOGIN;
     GRANT SELECT ON ALL TABLES IN SCHEMA "raw" TO telemetry_raw_read;
     GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA "raw" TO telemetry_raw_read;
 
-    ALTER DEFAULT PRIVILEGES IN SCHEMA "raw"
+    ALTER DEFAULT PRIVILEGES FOR ROLE telemetry_owner IN SCHEMA "raw"
     GRANT SELECT ON TABLES TO telemetry_raw_read;
 
-    GRANT telemetry_raw TO telemetry_raw_write, telemetry_raw_read;
+    GRANT telemetry_raw_write TO telemetry_raw;
+    GRANT telemetry_raw_read TO telemetry_raw;
 
     CREATE ROLE telemetry_read WITH NOLOGIN;
     GRANT telemetry_raw_read TO telemetry_read;
