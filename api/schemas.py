@@ -131,7 +131,7 @@ class EventCreate(BaseSchema):
     ] = Field(default_factory=lambda: datetime.now(UTC))
 
 
-class EventFullSchema(BaseSchema):
+class EventFullSchema(EventCreate):
     model_config = {"title": "Event"}
-    id_: UUID7 = Field(alias="id")
+    id_: str = Field(alias="id")
     retrieved_at: AwareDatetime

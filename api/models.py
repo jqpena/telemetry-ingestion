@@ -10,10 +10,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 from .database import DBBase
 
 
-class RawEvents(DBBase):
+class RawEvent(DBBase):
     __tablename__ = "events"
 
-    _id: Mapped[UUID | None] = mapped_column(
+    id_: Mapped[UUID | None] = mapped_column(
         "id",
         server_default=func.uuidv7(),
         default=uuid7,
