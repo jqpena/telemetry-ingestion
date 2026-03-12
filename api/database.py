@@ -1,6 +1,8 @@
+from typing import Any
+
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, class_mapper, sessionmaker
 from sqlalchemy.schema import MetaData
 
 from .config import Config
@@ -9,6 +11,11 @@ from .exc import InternalError
 
 class DBBase(DeclarativeBase):
     metadata = MetaData(schema="raw")
+
+    def _asdict(self) -> dict[str, Any]:
+        return {
+            column.key: getattr(self, column.key) for column in class_mapper(self.__class__).attrs
+        }
 
 
 _engine = create_engine(
