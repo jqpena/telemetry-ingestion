@@ -20,12 +20,12 @@ class DBBase(DeclarativeBase):
 
 _engine = create_engine(
     Config["DB_URL"],
-    echo=False,
-    echo_pool=False,
+    echo=True,
+    echo_pool=Config["LOG_LEVEL"],
     isolation_level="READ COMMITTED",
     pool_size=Config["DB_POOL_SIZE"],
     max_overflow=15,
-    connect_args={"options": f"-c timezone={Config['TIMEZONE'] or 'UTC'}"},
+    connect_args={"options": f"-c timezone={Config['TIMEZONE'].key or 'UTC'}"},
 )
 
 SessionFactory = sessionmaker(bind=_engine, expire_on_commit=False, autoflush=False)
