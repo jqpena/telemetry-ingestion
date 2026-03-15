@@ -24,4 +24,5 @@ class InternalError(ServiceError):
 
     def __init__(self, msg, internal_exc, *args: object) -> None:
         self.internal_exc = internal_exc
-        super().__init__(msg, *args)
+        message = f"{msg}. {internal_exc}"
+        super().__init__(message, *args)
