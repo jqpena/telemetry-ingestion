@@ -1,18 +1,20 @@
 from datetime import UTC, datetime
-from typing import Annotated, Generic, TypeVar
+from typing import Annotated, Any, Generic, TypeVar
 
 from pydantic import (
-    UUID7,
     AliasGenerator,
     AwareDatetime,
-    Base64UrlBytes,
     BaseModel,
     ConfigDict,
     Field,
     NonNegativeFloat,
     PositiveInt,
+    field_validator,
+    model_validator,
 )
 from pydantic.alias_generators import to_camel, to_snake
+
+from .security import Cursor, encode_id, urlsafe_cursor_encode
 
 _TModel = TypeVar("_TModel", bound="BaseSchema")
 
@@ -26,36 +28,28 @@ class BaseSchema(BaseModel):
     )
 
 
-class CursorPageQuery(BaseSchema):
-    model_config = {"title": "CursorQuery"}
+class CursorResponse(BaseSchema):
     next_: Annotated[
-        Base64UrlBytes | None,
-        Field(title="Identifier to fetch next page batch", description="Cursor for the next page"),
-    ] = Field(alias="next", validation_alias="next", default=None)
-    limit: Annotated[
-        PositiveInt,
+        str | None,
         Field(
-            title="Max records",
-            description="Maximum number of records to return per page",
-            lt=5000,
-            default=1000,
+            alias="next",
+            description="Identifier for the next cursor batch",
+            exclude_if=lambda v: v is None,
         ),
-    ] = Field(lt=5000, default=1000)
-
-
-class Cursor(BaseSchema):
-    """:class:`Cursor`, internal schema to map opaque page query parameters
-        of pagination requests.
-
-    .. note:: This class can be extended to store a robust cursor with information
-                 as direction, expiration, etc. For now, it only stores the timestamp
-                 and the id of the next batch
-    """
-
-    next_: UUID7 | None
-    timestamp: AwareDatetime | None
-    has_more: bool
+    ] = Field(alias="next", default=None, exclude_if=lambda v: v is None)
+    has_more: bool = Field(default=False)
     limit: PositiveInt = Field(lt=5000, default=1000)
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_next(cls, data):
+        if isinstance(data, Cursor):
+            return {
+                "next_": urlsafe_cursor_encode(data),
+                "has_more": data.has_more,
+                "limit": data.limit,
+            }
+        return data
 
 
 class ResponsePage(BaseSchema, Generic[_TModel]):
@@ -68,12 +62,27 @@ class ResponsePage(BaseSchema, Generic[_TModel]):
         ),
     ]
     paging: Annotated[
-        CursorPageQuery,
+        CursorResponse,
         Field(
             title="Page description",
             description="Information of the current page and the cursor identifier for the next page batch",
         ),
     ]
+
+    @field_validator("paging", mode="before")
+    @classmethod
+    def check_paging(cls, value):
+        if isinstance(value, CursorResponse):
+            return value
+        if isinstance(value, Cursor):
+            return CursorResponse.model_validate(
+                {
+                    "next_": urlsafe_cursor_encode(value),
+                    "limit": value.limit,
+                    "has_more": value.has_more,
+                },
+                by_name=True,
+            )
 
 
 # TODO: Enhance the information that is returned when an error occurs
@@ -82,6 +91,7 @@ class ErrorResponse(BaseSchema):
     detail: Annotated[
         str, Field(title="Error details", description="Verbose information about the error")
     ]
+    extra: dict[str, Any] | None = None
 
 
 class EventCreate(BaseSchema):
@@ -135,3 +145,10 @@ class EventFullSchema(EventCreate):
     model_config = {"title": "Event"}
     id_: str = Field(alias="id")
     retrieved_at: AwareDatetime
+
+    @field_validator("id_", mode="before")
+    @classmethod
+    def coerce_id(cls, value):
+        if isinstance(value, str):
+            return value
+        return encode_id(value)
