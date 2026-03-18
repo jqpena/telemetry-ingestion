@@ -34,7 +34,7 @@ v1_router = APIRouter(prefix="/v1.0", tags=["v1"], redirect_slashes=True)
     },
     response_model_exclude_none=True,
 )
-def read_events(response: Response, cursor: Cursor, session: Session):
+def read_events(req: Request, response: Response, cursor: Cursor, session: Session):
     page = ResponsePage.model_validate({"data": [], "paging": cursor})
     try:
         raw_page, _ = get_events(session, cursor)
@@ -43,7 +43,13 @@ def read_events(response: Response, cursor: Cursor, session: Session):
             for raw_event in raw_page
         ]
         page.paging = CursorResponse.model_validate(cursor, by_name=True)
-    except InternalError:
+    except InternalError as e_internal:
+        req.state.logger.error(
+            "Internal error retrieving page of size %r. (Type=%s,Msg=%s)",
+            cursor,
+            type(e_internal.internal_exc).__name__,
+            e_internal.msg,
+        )
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         return ErrorResponse(detail="Cannot retrieve page ")
     return page
@@ -67,7 +73,7 @@ def read_events(response: Response, cursor: Cursor, session: Session):
     },
     response_model_exclude_none=True,
 )
-def find_event(response: Response, cursor: IdPath, session: Session):
+def find_event(req: Request, response: Response, cursor: IdPath, session: Session):
     try:
         model = get_event(session, cursor)
         if model is None:
@@ -75,9 +81,20 @@ def find_event(response: Response, cursor: IdPath, session: Session):
         model_dict = model._asdict()
         schema = EventFullSchema.model_validate(model_dict, by_name=True)
         return schema
-    except (ValidationError, InternalError):
+    except (ValidationError, InternalError) as e_internal:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         session.rollback()
+        type_error = (
+            "ValidationError"
+            if isinstance(e_internal, ValidationError)
+            else type(e_internal.internal_exc).__name__
+        )
+        req.state.logger.error(
+            "Internal error finding event with id %s. (Type=%s,Msg=%s)",
+            cursor,
+            type_error,
+            e_internal.title if isinstance(e_internal, ValidationError) else e_internal.msg,
+        )
         return ErrorResponse(detail="Unable to find record, Internal server error")
     except ClientError as e_cli:
         response.status_code = status.HTTP_400_BAD_REQUEST
@@ -99,7 +116,7 @@ def find_event(response: Response, cursor: IdPath, session: Session):
     },
     response_model_exclude_none=True,
 )
-def add_event(_: Request, response: Response, session: Session, event: EmbeddedEvent):
+def add_event(req: Request, response: Response, session: Session, event: EmbeddedEvent):
     try:
         model = save_event(session, event)
         if model is None:
@@ -109,9 +126,19 @@ def add_event(_: Request, response: Response, session: Session, event: EmbeddedE
         model_dict = model._asdict()
         schema = EventFullSchema.model_validate(model_dict, by_name=True)
         return schema
-    except (InternalError, ValidationError):
+    except (InternalError, ValidationError) as e_internal:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         session.rollback()
+        type_error = (
+            "ValidationError"
+            if isinstance(e_internal, ValidationError)
+            else type(e_internal.internal_exc).__name__
+        )
+        req.state.logger.error(
+            "Internal error creating new event. (Type=%s,Msg=%s)",
+            type_error,
+            e_internal.title if isinstance(e_internal, ValidationError) else e_internal.msg,
+        )
         return ErrorResponse(detail="Unable to process event, internal server error")
     except ClientError as e_cli:
         response.status_code = status.HTTP_400_BAD_REQUEST
