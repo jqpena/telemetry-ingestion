@@ -35,17 +35,17 @@ RUN adduser \
 # Leverage a bind mount to requirements.txt to avoid having to copy them into
 # into this layer.
 RUN --mount=type=cache,target=/root/.cache/pip \
-    --mount=type=bind,source=requirements.txt,target=requirements.txt \
+    --mount=type=bind,source=requirements/requirements.txt,target=requirements.txt \
     python -m pip install -r requirements.txt
 
 # Switch to the non-privileged user to run the application.
 USER appuser
 
 # Copy the source code into the container.
-COPY . .
+COPY api api
 
 # Expose the port that the application listens on.
 EXPOSE 8000
 
 # Run the application.
-CMD uvicorn api.main:app --bind=0.0.0.0:8000
+CMD ["uvicorn", "--host", "0.0.0.0", "--port", "8000", "--log-config", "api/logger.yaml", "api.main:app"]
