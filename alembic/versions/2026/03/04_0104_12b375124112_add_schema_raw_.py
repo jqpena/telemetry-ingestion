@@ -29,7 +29,7 @@ def upgrade() -> None:
         sa.Column("value", sa.FLOAT(precision=18), nullable=False),
         sa.Column("host", sa.VARCHAR(length=256), nullable=False),
         sa.Column("timestamp", postgresql.TIMESTAMP(timezone=True), nullable=False),
-        sa.Column("retrieved_at", postgresql.TIMESTAMP(timezone=True), nullable=False),
+        sa.Column("received_at", postgresql.TIMESTAMP(timezone=True), nullable=False),
         sa.CheckConstraint("value >= 0", name="chk_value_non_negative"),
         sa.PrimaryKeyConstraint("id", "timestamp", name="pk_raw_events"),
         schema="raw",

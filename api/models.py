@@ -28,7 +28,7 @@ class RawEvent(DBBase):
         default=lambda: datetime.now(UTC),
         type_=TIMESTAMP(timezone=True),
     )
-    retrieved_at: Mapped[datetime] = mapped_column(
+    received_at: Mapped[datetime] = mapped_column(
         nullable=False,
         default=lambda: datetime.now(UTC),
         type_=TIMESTAMP(timezone=True),
