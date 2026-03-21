@@ -9,11 +9,13 @@ from pydantic import (
     Field,
     NonNegativeFloat,
     PositiveInt,
+    ValidationError,
     field_validator,
     model_validator,
 )
 from pydantic.alias_generators import to_camel, to_snake
 
+from .models import EventTypesEnum
 from .security import Cursor, encode_id, urlsafe_cursor_encode
 
 _TModel = TypeVar("_TModel", bound="BaseSchema")
@@ -97,19 +99,14 @@ class ErrorResponse(BaseSchema):
 class EventCreate(BaseSchema):
     model_config = {"title": "NewEvent"}
     event_type: Annotated[
-        str,
+        EventTypesEnum,
         Field(
             title="Event Type",
             description=(
                 "The type of the event, used to identify the event and its "
                 "meaning in the context of the host and service that trigger it"
             ),
-            examples=[
-                "cpu_usage",
-                "memory_usage",
-                "disk_io",
-                "network_latency",
-            ],  # TODO: convert into a Enum that map a Postgres ENUM
+            examples=[_type.name for _type in EventTypesEnum],
         ),
     ]
     service: Annotated[
@@ -139,6 +136,13 @@ class EventCreate(BaseSchema):
             ),
         ),
     ] = Field(default_factory=lambda: datetime.now(UTC))
+
+    @field_validator("timestamp", mode="after")
+    @classmethod
+    def non_future_timestamp(cls, value):
+        if value > datetime.now(UTC):
+            raise ValidationError("Timestamp cannot be in the futre")
+        return value
 
 
 class EventFullSchema(EventCreate):

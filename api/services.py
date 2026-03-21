@@ -90,7 +90,12 @@ def get_events(session: "Session", cursor: Cursor | None = None) -> tuple[list[R
     return page, cursor
 
 
-def save_event(session: "Session", event: "EventCreate", flush=True) -> RawEvent | None:
+def save_event(
+    session: "Session",
+    event: "EventCreate",
+    flush=True,
+    commit=True,
+) -> RawEvent | None:
     """Add a new event to the database"""
     new_event = None
     try:
@@ -98,10 +103,14 @@ def save_event(session: "Session", event: "EventCreate", flush=True) -> RawEvent
         session.add(new_event)
         if flush:
             session.flush()
+        if commit:
+            session.commit()
         session.refresh(new_event, attribute_names=["id_", "retrieved_at"])
     except SQLAlchemyError as e_sql:
+        session.rollback()
         raise InternalError(f"Cannot save new event entry {event}", e_sql) from None
     except ValidationError as e_pydantic:
+        session.rollback()
         raise InternalError(
             "Failed to validate model returned when creating new event", e_pydantic
         ) from None

@@ -128,7 +128,6 @@ def add_event(req: Request, response: Response, session: Session, event: Embedde
         return schema
     except (InternalError, ValidationError) as e_internal:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        session.rollback()
         type_error = (
             "ValidationError"
             if isinstance(e_internal, ValidationError)
@@ -142,5 +141,4 @@ def add_event(req: Request, response: Response, session: Session, event: Embedde
         return ErrorResponse(detail="Unable to process event, internal server error")
     except ClientError as e_cli:
         response.status_code = status.HTTP_400_BAD_REQUEST
-        session.rollback()
         return ErrorResponse(detail=f"Server: {e_cli.msg}")
