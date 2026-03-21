@@ -9,7 +9,7 @@ Create Date: 2026-03-20 04:20:06.823672+00:00
 from collections.abc import Sequence
 
 from alembic import op
-from api.database import EventTypes
+from api.models import EventTypes
 from sqlalchemy.dialects.postgresql import VARCHAR
 
 # revision identifiers, used by Alembic.
