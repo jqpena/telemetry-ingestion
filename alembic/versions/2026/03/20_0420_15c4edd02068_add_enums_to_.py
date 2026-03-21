@@ -22,7 +22,13 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     """Upgrade schema."""
     EventTypes.create(op.get_bind())
-    op.alter_column("events", "event_type", type_=EventTypes, schema="raw")
+    op.alter_column(
+        "events",
+        "event_type",
+        type_=EventTypes,
+        schema="raw",
+        postgresql_using="event_type::raw.event_types",
+    )
 
 
 def downgrade() -> None:
