@@ -33,5 +33,5 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
-    EventTypes.drop(op.get_bind())
     op.alter_column("events", "event_type", type_=VARCHAR(100), schema="raw")
+    EventTypes.drop(op.get_bind())

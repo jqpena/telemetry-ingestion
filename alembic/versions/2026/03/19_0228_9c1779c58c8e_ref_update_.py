@@ -31,10 +31,8 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.create_index(
+    op.drop_index(
         "idx_events_timestamp_service",
         "events",
-        ("timestamp",),
-        postgresql_include=["host", "service", "event_type"],
         schema="raw",
     )

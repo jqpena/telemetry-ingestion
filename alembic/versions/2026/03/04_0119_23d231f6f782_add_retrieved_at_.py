@@ -20,9 +20,9 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     """Upgrade schema."""
     op.create_index(
-        "idx_events_retrieved_at",
+        "idx_events_received_at",
         "events",
-        ("retrieved_at",),
+        ("received_at",),
         unique=False,
         schema="raw",
         postgresql_include=["host", "service", "event_type"],
@@ -45,6 +45,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_index("idx_events_retrieved_at", "events", schema="raw")
+    op.drop_index("idx_events_received_at", "events", schema="raw")
     op.drop_index("idx_events_type_service", "events", schema="raw")
     op.drop_index("idx_events_timestamp", "events", schema="raw")
