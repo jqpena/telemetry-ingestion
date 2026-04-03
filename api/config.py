@@ -8,29 +8,12 @@ from typing_extensions import Sentinel
 MandatoryEnv = Sentinel("MandatoryEnv")
 
 
-class _server(TypedDict):
-    host: str
-    port: int
-    workers: int | None
-    reload: bool
-    log_level: str
-
-
 class _config(TypedDict):
     DB_URL: str
     DB_POOL_SIZE: int
     TIMEZONE: ZoneInfo
     LOG_LEVEL: str
     SECRET_KEY: str
-
-
-Server: _server = {
-    "host": config("HOST", default="127.0.0.1"),
-    "port": config("PORT", default=8000, cast=int),
-    "reload": config("RELOAD", default=False, cast=bool),
-    "workers": config("WORKERS", default=None),
-    "log_level": config("LOG_LEVEL", default="info").lower(),
-}
 
 
 Config: _config = {
@@ -41,8 +24,6 @@ Config: _config = {
     "LOG_LEVEL": config("LOG_LEVEL", default="info").lower(),
 }
 
-if Server["reload"] and Server["workers"] is not None:
-    Server["workers"] = None
 
 if Config["SECRET_KEY"] is MandatoryEnv:
     raise RuntimeError("Security breach, unset environment variable SECRET_KEY")

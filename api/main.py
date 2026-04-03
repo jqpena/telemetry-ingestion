@@ -9,9 +9,10 @@ from .routes import v1_router
 
 
 @asynccontextmanager
-async def spam(_):
+async def spam(app):
     engine = create_factories()
-    yield {"logger": Logger}
+    app.state.logger = Logger
+    yield
     engine.dispose()
 
 
