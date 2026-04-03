@@ -3,6 +3,7 @@ from pydantic import ValidationError
 
 from .depends import Cursor, EmbeddedEvent, IdPath, Session
 from .exc import ClientError, InternalError
+from .logger import Logger
 from .schemas import CursorResponse, ErrorResponse, EventFullSchema, ResponsePage
 from .services import get_event, get_events, save_event
 
@@ -12,8 +13,7 @@ v1_router = APIRouter(prefix="/v1.0", tags=["v1"], redirect_slashes=True)
 @v1_router.get(
     "/events",
     tags=["read"],
-    status_code=status.HTTP_200_OK,
-    response_model=ResponsePage[EventFullSchema],
+    # status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {
             "model": ResponsePage[EventFullSchema],
@@ -23,10 +23,6 @@ v1_router = APIRouter(prefix="/v1.0", tags=["v1"], redirect_slashes=True)
             "model": ErrorResponse,
             "description": "Invalid query parameters",
         },
-        status.HTTP_404_NOT_FOUND: {
-            "model": ErrorResponse,
-            "description": "Cannot find event with given Id",
-        },
         status.HTTP_500_INTERNAL_SERVER_ERROR: {
             "model": ErrorResponse,
             "description": "Internal error, try again later",
@@ -34,31 +30,32 @@ v1_router = APIRouter(prefix="/v1.0", tags=["v1"], redirect_slashes=True)
     },
     response_model_exclude_none=True,
 )
-def read_events(req: Request, response: Response, cursor: Cursor, session: Session):
+def read_events(response: Response, cursor: Cursor, session: Session):
+    if isinstance(cursor.next_, str):
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return ErrorResponse(detail=cursor.next_)
     page = ResponsePage.model_validate({"data": [], "paging": cursor})
     try:
-        raw_page, _ = get_events(session, cursor)
+        raw_page, _new_cursor = get_events(session, cursor)
         page.data = [
             EventFullSchema.model_validate(raw_event, from_attributes=True, by_name=True)
             for raw_event in raw_page
         ]
-        page.paging = CursorResponse.model_validate(cursor, by_name=True)
+        page.paging = CursorResponse.model_validate(_new_cursor, by_name=True)
     except InternalError as e_internal:
-        req.state.logger.error(
+        Logger.error(
             "Internal error retrieving page of size %r. (Type=%s,Msg=%s)",
             cursor,
             type(e_internal.internal_exc).__name__,
             e_internal.msg,
         )
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        return ErrorResponse(detail="Cannot retrieve page ")
     return page
 
 
 @v1_router.get(
     "/events/{id}",
     tags=["read"],
-    response_model=EventFullSchema,
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {
@@ -73,7 +70,11 @@ def read_events(req: Request, response: Response, cursor: Cursor, session: Sessi
     },
     response_model_exclude_none=True,
 )
-def find_event(req: Request, response: Response, cursor: IdPath, session: Session):
+def find_event(response: Response, cursor: IdPath, session: Session):
+    print("This is cursor", cursor)
+    if cursor is None:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return ErrorResponse(detail="Event id is not a valid id")
     try:
         model = get_event(session, cursor)
         if model is None:
@@ -89,7 +90,7 @@ def find_event(req: Request, response: Response, cursor: IdPath, session: Sessio
             if isinstance(e_internal, ValidationError)
             else type(e_internal.internal_exc).__name__
         )
-        req.state.logger.error(
+        Logger.error(
             "Internal error finding event with id %s. (Type=%s,Msg=%s)",
             cursor,
             type_error,
@@ -133,10 +134,10 @@ def add_event(req: Request, response: Response, session: Session, event: Embedde
             if isinstance(e_internal, ValidationError)
             else type(e_internal.internal_exc).__name__
         )
-        req.state.logger.error(
+        Logger.error(
             "Internal error creating new event. (Type=%s,Msg=%s)",
             type_error,
-            e_internal.title if isinstance(e_internal, ValidationError) else e_internal.msg,
+            str(e_internal) if isinstance(e_internal, ValidationError) else e_internal.msg,
         )
         return ErrorResponse(detail="Unable to process event, internal server error")
     except ClientError as e_cli:

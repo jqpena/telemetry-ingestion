@@ -19,4 +19,4 @@ EmbeddedEvent = Annotated[
     ),
 ]
 Cursor = Annotated[CursorSchema, Depends(cursor_decode)]
-IdPath = Annotated[UUID, Depends(decode_id)]
+IdPath = Annotated[UUID | None, Depends(decode_id)]

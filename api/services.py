@@ -62,39 +62,44 @@ def get_events(session: "Session", cursor: Cursor | None = None) -> tuple[list[R
     database connected with `session`
 
     :param:
-
+        session: `sqlalchemy.Session`.
+        cursor: class:security.Cursor
     """
     if not cursor:
         cursor = Cursor()
+    _cursor = Cursor(next_=None, timestamp=None, has_more=False, limit=cursor.limit)
     page = []
     try:
-        sorter = tuple_(RawEvent.timestamp, RawEvent.id_)
+        sorter = tuple_(RawEvent.received_at, RawEvent.id_)
         limit = cursor.limit + 1
         stmt = lambda_stmt(lambda: select(RawEvent))
-        if cursor.next_ and cursor.timestamp:
-            id_ = cursor.next_
-            timestamp = cursor.timestamp
-            stmt += lambda s: s.where(sorter > (timestamp, id_))
         stmt += lambda s: s.order_by(sorter)
         stmt += lambda s: s.limit(limit)
+
+        # This is not the first page, we have to offset by
+        # the cursor
+        if cursor.next_ and cursor.timestamp:
+            sort_vale = tuple_(cursor.timestamp, cursor.next_)  # type: ignore
+            stmt += lambda s: s.where(sorter >= sort_vale)
+
         page = [record[0] for record in session.execute(stmt).all()]
         if len(page) == limit:
             ahead = page.pop()
-            cursor.next_ = ahead.id_
-            cursor.timestamp = ahead.retrieved_at
-            cursor.has_more = True
+            _cursor.next_ = ahead.id_
+            _cursor.timestamp = ahead.received_at
+            _cursor.has_more = True
     except SQLAlchemyError as e_sql:
         raise InternalError(f"Cannot fetch next page from {cursor}", e_sql) from None
     except IndexError as e_idx:
         raise InternalError("Un expected small size", e_idx) from None
-    return page, cursor
+    return page, _cursor
 
 
 def save_event(
     session: "Session",
     event: "EventCreate",
     flush=True,
-    commit=True,
+    commit=False,
 ) -> RawEvent | None:
     """Add a new event to the database"""
     new_event = None
@@ -105,7 +110,7 @@ def save_event(
             session.flush()
         if commit:
             session.commit()
-        session.refresh(new_event, attribute_names=["id_", "retrieved_at"])
+        session.refresh(new_event, attribute_names=["id_", "received_at"])
     except SQLAlchemyError as e_sql:
         session.rollback()
         raise InternalError(f"Cannot save new event entry {event}", e_sql) from None

@@ -1,4 +1,5 @@
 import base64
+import binascii
 import hmac
 import struct
 from datetime import datetime
@@ -27,10 +28,31 @@ class Cursor(BaseModel):
         alias_generator=AliasGenerator(validation_alias=to_snake, serialization_alias=to_camel),
     )
 
-    next_: UUID7 | None = Field(default=None, repr=True)
+    next_: UUID7 | str | None = Field(default="Un processable next query", repr=True)
     timestamp: AwareDatetime | None = Field(default=None, repr=True)
     has_more: bool = Field(default=False, repr=False)
     limit: PositiveInt = Field(lt=5000, default=1000, repr=False)
+
+
+def bs64_encode(value):
+    """Encode base64 url safe trimming equals '='"""
+    return base64.urlsafe_b64encode(value).decode().strip("=")
+
+
+def bs64_decode(value):
+    """Decode base64 url safe string into its bytes, it add equal sign pad"""
+    pad = len(value) % 4
+    decoded = None
+    try:
+        if pad == 2:
+            decoded = base64.urlsafe_b64decode(value + "==")
+        elif pad == 3:
+            decoded = base64.urlsafe_b64decode(value + "=")
+        else:
+            decoded = base64.urlsafe_b64decode(value)
+    except binascii.Error:
+        pass
+    return decoded
 
 
 def sha256_signature(secret_key, message):
@@ -42,39 +64,50 @@ def sha256_signature(secret_key, message):
     return hmac.new(secret_key, message, "sha256").digest()
 
 
-def ints_bytes(values):
+def floats_bytes(values):
     """Convert ints to bytes Big Endian"""
-    return struct.pack(">" + "Q" * len(values), *values)
+    return struct.pack(">" + "d" * len(values), *values)
 
 
-def bytes_int(value):
+def bytes_float(value):
     """Unpack bytes to int big Endian"""
-    return struct.unpack(">Q", value)[0]
+    return struct.unpack(">d", value)[0]
 
 
 def urlsafe_cursor_encode(cursor: Cursor):
     """Encode a cursor as an URL-sage string"""
     if cursor.next_ is None or cursor.timestamp is None:
         return None
-    payload = ints_bytes((cursor.timestamp.timestamp(),)) + cursor.next_.bytes
+    if isinstance(cursor.next_, str):
+        return None
+    payload = floats_bytes((cursor.timestamp.timestamp(),)) + cursor.next_.bytes
     signature = sha256_signature(Config["SECRET_KEY"], payload)[:8]
-    return base64.urlsafe_b64encode(payload + signature).decode()
+    return bs64_encode(payload + signature)
 
 
 def cursor_decode(cursor: QueryCursor):
     """Decode a cursor from a URL query parameter"""
     if cursor.next_ is None:
         return Cursor(next_=None, timestamp=None, has_more=False, limit=cursor.limit)
-    raw_bytes = base64.urlsafe_b64decode(cursor.next_)
+    if not (raw_bytes := bs64_decode(cursor.next_)):
+        return Cursor()
     payload = raw_bytes[:-8]
     signature = raw_bytes[-8:]
     expected_sig = sha256_signature(Config["SECRET_KEY"], payload)[:8]
-    assert hmac.compare_digest(signature, expected_sig), "Invalid cursor signature"
+
+    if not hmac.compare_digest(signature, expected_sig):
+        return Cursor(
+            next_="Invalid cursor signature",
+            timestamp=None,
+            has_more=False,
+            limit=cursor.limit,
+        )
+
     return Cursor(
         next_=UUID(bytes=raw_bytes[8:24], version=7),
         timestamp=datetime.fromtimestamp(
-            bytes_int(raw_bytes[:8]),
-        ),
+            bytes_float(raw_bytes[:8]),
+        ).astimezone(Config["TIMEZONE"]),
         has_more=False,
         limit=cursor.limit,
     )
@@ -83,10 +116,15 @@ def cursor_decode(cursor: QueryCursor):
 def encode_id(_id: UUID | None):
     if not _id:
         return ""
-    return base64.urlsafe_b64encode(_id.bytes).decode()
+    return bs64_encode(_id.bytes)
 
 
-def decode_id(cursor: Id) -> UUID:
-    print(cursor)
-    raw = base64.urlsafe_b64decode(cursor)
-    return UUID(bytes=raw, version=7)
+def decode_id(cursor: Id) -> UUID | None:
+    if not (raw := bs64_decode(cursor)):
+        return None
+    id_ = None
+    try:
+        id_ = UUID(bytes=raw, version=7)
+    except ValueError:
+        pass
+    return id_
