@@ -9,11 +9,11 @@ from pydantic import (
     Field,
     NonNegativeFloat,
     PositiveInt,
-    ValidationError,
     field_validator,
     model_validator,
 )
 from pydantic.alias_generators import to_camel, to_snake
+from pydantic_core import PydanticCustomError
 
 from .models import EventTypesEnum
 from .security import Cursor, encode_id, urlsafe_cursor_encode
@@ -97,7 +97,13 @@ class ErrorResponse(BaseSchema):
 
 
 class EventCreate(BaseSchema):
-    model_config = {"title": "NewEvent"}
+    model_config = ConfigDict(
+        extra="forbid",
+        serialize_by_alias=True,
+        str_strip_whitespace=True,
+        alias_generator=AliasGenerator(validation_alias=to_snake, serialization_alias=to_camel),
+        title="NewEvent",
+    )
     event_type: Annotated[
         EventTypesEnum,
         Field(
@@ -141,14 +147,18 @@ class EventCreate(BaseSchema):
     @classmethod
     def non_future_timestamp(cls, value):
         if value > datetime.now(UTC):
-            raise ValidationError("Timestamp cannot be in the futre")
+            raise PydanticCustomError(
+                "FutureDate",
+                "Timestamp cannot be in the future",
+                {"value": value},
+            )
         return value
 
 
 class EventFullSchema(EventCreate):
     model_config = {"title": "Event"}
     id_: str = Field(alias="id")
-    retrieved_at: AwareDatetime
+    received_at: AwareDatetime
 
     @field_validator("id_", mode="before")
     @classmethod

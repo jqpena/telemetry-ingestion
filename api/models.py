@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID, uuid7
 
 import sqlalchemy as sa
@@ -16,7 +16,7 @@ EventTypes = ENUM(
     *_EVENT_TYPES, name="event_types", schema=DBBase.metadata.schema, create_type=False
 )
 
-EventTypesEnum = Enum("EventTypesEnum", EventTypes.enums)
+EventTypesEnum = StrEnum("EventTypesEnum", EventTypes.enums)
 
 
 class RawEvent(DBBase):
@@ -34,7 +34,6 @@ class RawEvent(DBBase):
     host: Mapped[str] = mapped_column(nullable=False, type_=VARCHAR(256))
     timestamp: Mapped[datetime] = mapped_column(
         nullable=False,
-        default=lambda: datetime.now(UTC),
         type_=TIMESTAMP(timezone=True),
     )
     received_at: Mapped[datetime] = mapped_column(
